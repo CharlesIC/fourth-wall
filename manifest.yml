@@ -1,0 +1,11 @@
+---
+applications:
+- name: helping-users-pr-monitor
+  routes:
+  - route: helping-users-pr-monitor.cloudapps.digital
+  memory: 64M
+  buildpacks:
+  - staticfile_buildpack
+  metadata:
+    annotations:
+      contact: "karol.gancarz@digital.cabinet-office.gov.uk"
