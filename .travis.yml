@@ -19,4 +19,4 @@ deploy:
   space: eidas-reference
   on:
     repo: CharlesIC/fourth-wall
-    branch: gh-pages
+    branch: master
