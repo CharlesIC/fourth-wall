@@ -3,9 +3,20 @@ notifications:
   email: false
 sudo: false
 install:
-  - npm install --no-optional
+- npm install --no-optional
 before_script:
-  - python -m SimpleHTTPServer &
+- python -m SimpleHTTPServer &
 script:
-  - npm test
+- npm test
 
+deploy:
+  provider: cloudfoundry
+  api: https://api.cloud.service.gov.uk
+  username: ida-operations+paas-build-bot@digital.cabinet-office.gov.uk
+  password:
+    secure: Yy6VihNsv2m2EQGyYFZbxgYBcLAb8eghROwWM+OlUT17BYHqmZTBHxCa/5bt1WQrP+Kv4MLXTFdcFBIXvcauvPkI2QgJwmC0qNzfE5uI9x9jXKlw7aXj+LNHbtLJyWZ6jxFVfex//P4BxkXSRj/JzbO4dYav0LEhrh2fhnSli6/LhjumtHL2oxNnr3zalYbXpW54XVSWzN2LXFLFEsMzU/MHoRNcQ9n6PsxGDo8Gfi+lEY2UN1xX2ZIXDOSa3CIcQl4FqakxrDTl8n8Dp9Zz20t8HiT45e++tpv3E+DjUqxTjFlGEFmkzO9aChijVfezeNQpFJQ+bMkjiq7Sgoh6YvOfjeGQAwbBMG/RiBhCCNdpx+BD1AyyfZ/V1TG60YiQlOfDYvgC7cyXBy0At2NflfOH3mTUBFdxbRvsqi2QmsbPyUz2kppNm2rh4Kfe+Od/5A/WXS5GXLlmwSfC1+fauFNDMG8IHceRYeDOOfsaNePTejLOGdJdb4mt2dPW2wCjFQ9tV2Cdfwpze8dnAheVpRthAhSHVrO+tNlau4NwlRhQnU8jZRXLHiND51mH70QCoHb9DExrXiNMCngAoUMFQB3UBLmN6g4FNxkW4O19p8lJRU6PL2O7PS2s7xALZ+PWnOw6smx/1wg1V+uSVK3WsInIXCW7iOh8MQNnPsRQxys=
+  organization: govuk-verify
+  space: eidas-reference
+  on:
+    repo: CharlesIC/fourth-wall
+    branch: gh-pages
