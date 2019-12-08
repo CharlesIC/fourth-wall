@@ -21,18 +21,12 @@
 
       this.$el.addClass(this.ageClass(this.model.get('elapsed_time')));
 
-      if (FourthWall.filterUsers && FourthWall.importantUsers.length > 0 && $.inArray(this.model.get('user').login, FourthWall.importantUsers) == -1) {
+      if (FourthWall.filterUsers && FourthWall.importantUsers.length > 0 && $.inArray(this.model.get('user').login, FourthWall.importantUsers) === -1) {
         this.$el.addClass('unimportant-user');
       }
 
       if (!this.model.collection.important) {
         this.$el.addClass('unimportant-repo');
-      }
-
-      if (this.model.reviewComment.get('changesRequested')) {
-        this.$el.addClass("changes-requested");
-      } else if (this.model.reviewComment.get('approved')) {
-        this.$el.addClass("thumbsup");
       }
 
       if (FourthWall.isWip(this.model)) {
@@ -46,53 +40,31 @@
         }
       }
 
-      if (this.model.info.get('mergeable') === false){
-        var statusString = '<p class="status not-mergeable">No auto merge</p>';
-      } else if (this.model.status.get('state')){
-        var state = this.model.status.get('state');
-        var statusString = '<p class="status ' + state + '">Status: ' + state + '</p>';
-      } else {
-        var statusString = '<p class="status">No status</p>';
-      }
+      let state = this.model.status.get('state');
 
-      var commentCount = 0;
-      if (this.model.comment.get('numComments')){
-        commentCount = commentCount + this.model.comment.get('numComments');
-      }
+      let statusString =
+        this.model.info.get('mergeable') === false ? '<p class="status not-mergeable">No auto merge</p>' :
+          state ? `<p class="status ${state}">Status: ${state}</p>` :
+            '<p class="status">No status</p>';
 
-      if (this.model.reviewComment.get('numComments')){
-        commentCount = commentCount + this.model.reviewComment.get('numComments');
-      }
-
-      var suffix = "";
-      if (commentCount !== 1) {
-        suffix = "s";
-      }
-
-      var assignee = "";
+      let assignee = "";
       if (this.model.get('assignee')) {
-        assignee = ' under review by ' + this.model.get('assignee').login;
+        assignee = ` under review by ${this.model.get('assignee').login}`;
         this.$el.addClass("under-review");
       }
 
       this.$el.html([
-        '<img class="avatar" src="', this.model.get('user').avatar_url, '" />',
+        `<img class="avatar" src="${this.model.get('user').avatar_url}" />`,
         statusString,
-        '<h2>', this.model.get('repo'), '</h2>',
-        '<div class="elapsed-time" data-created-at="',
-        this.model.get('created_at'),
-        '">',
+        `<h2 class="repo-name">${this.model.get('repo')}</h2>`,
+        `<div class="elapsed-time" data-created-at="${this.model.get('created_at')}">`,
         this.secondsToTime(this.model.get('elapsed_time')),
         '</div>',
-        '<p><a href="', this.model.get('html_url'), '">',
-        '<span class="username">',this.model.get('user').login,'</span>',
-        ': ',
-        this.escape(this.model.get('title')),
-        ' (#',
-        this.model.get('number'),
-        ')',
-        '</a>' + assignee + '</p>',
-        '<p class="comments"> ' + commentCount + " comment" + suffix + '</p>',
+        `<p class="pr-url"><a href="${this.model.get('html_url')}">`,
+        `<span class="username">${this.model.get('user').login}</span>: `,
+        `${this.escape(this.model.get('title'))} (#${this.model.get('number')})`,
+        `</a>${assignee}</p>`,
+        `<p class="reviews">${this.reviews()}</p>`
       ].join(''));
     },
 
@@ -101,7 +73,7 @@
     },
 
     ageClass: function (seconds) {
-      var hours = 3600;
+      let hours = 3600;
       if (seconds > (6 * hours)) {
         return "age-old";
       } else if (seconds > (2 * hours)) {
@@ -111,22 +83,26 @@
       }
     },
 
-    secondsToTime: function (seconds) {
-      var days    = Math.floor(seconds / 86400);
-      var hours   = Math.floor((seconds - (days * 86400)) / 3600);
-      var minutes = Math.floor((seconds - (days * 86400) - (hours * 3600)) / 60);
+    reviews: function () {
+      let numApprovals = this.model.reviewComment.get('numApprovals') || 0;
+      let numChangesRequested = this.model.reviewComment.get('numChangesRequested') || 0;
+      let numComments = this.model.comment.get('numComments') || 0 + this.model.reviewComment.get('numComments') || 0;
 
-      if (hours   < 10) {hours   = "0"+hours;}
-      if (minutes < 10) {minutes = "0"+minutes;}
-      if (days == 1) {
-        days = days + " day";
-      } else if (days > 1) {
-        days = days + " days";
-      } else {
-        days = "";
-      }
-      return days + ' ' + hours + 'h ' + minutes + 'm';
+      return `${numComments ? `<span class="review-marker">&#x1F4AC;${numComments}</span>` : ''}` +
+        `${numApprovals ? `<span class="review-marker">&#x2705;${numApprovals}</span>` : ''}` +
+        `${numChangesRequested ? `<span class="review-marker">&#x274C;${numChangesRequested}</span>` : ''}`;
+    },
+
+    secondsToTime: function (seconds) {
+      let days = Math.floor(seconds / 86400);
+      let hours = Math.floor((seconds - (days * 86400)) / 3600);
+      let minutes = Math.floor((seconds - (days * 86400) - (hours * 3600)) / 60);
+
+      hours = `${hours < 10 ? '0' : ''}${hours}`;
+      minutes = `${minutes < 10 ? '0' : ''}${minutes}`;
+      days = days > 0 ? `${days}d` : '';
+
+      return `${days} ${hours}h ${minutes}m`;
     }
   });
-
 }());

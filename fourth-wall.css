@@ -20,6 +20,7 @@ body {
 
 .status {
     padding: 10px;
+    border-radius: 5px;
 }
 
 .success {
@@ -34,6 +35,9 @@ body {
 }
 .pending {
     background-color: orange;
+}
+.review-marker {
+    padding-left: 1.4em;
 }
 
 #pulls {
@@ -78,12 +82,6 @@ body {
   display: none;
 }
 
-#pulls li.thumbsup {
-    background: #5c9317;
-}
-#pulls li.changes-requested {
-    background: #BF1E2D;
-}
 #pulls li h2 {
     margin:0;
 }
@@ -104,15 +102,15 @@ body {
 #pulls li.wip .avatar,
 #pulls li.wip .status,
 #pulls li.wip .elapsed-time,
-#pulls li.wip .comments {
+#pulls li.wip .reviews {
   display: none;
 }
-#pulls li.wip h2,
-#pulls li.wip p {
+#pulls li.wip .repo-name,
+#pulls li.wip .pr-url {
   display: inline-block;
   clear: none;
 }
-#pulls li.wip p {
+#pulls li.wip .pr-url {
   padding-top: 0.2em;
   padding-left: 0.5em;
 }
@@ -151,7 +149,7 @@ h2 {
 
 @media (min-width: 580px) {
     #pulls li {
-        padding-right: 120px;
+        padding-right: 125px;
         padding-left: 100px;
     }
 
@@ -169,7 +167,7 @@ h2 {
         top: 10px;
     }
 
-    p.comments {
+    p.reviews {
         float: right;
         clear: right;
     }
