@@ -46,7 +46,7 @@
     let teams = [];
     Object.keys(params).filter(function (key) {
       let match = key.match(/team$/);
-      return match && match[0] == 'team';
+      return match && match[0] === 'team';
     }).forEach(function (key) {
       let hostname = key.match(/^(.*?)_?team$/)[1];
       if (hostname === "") {
@@ -80,7 +80,7 @@
     }
   }
 
-  FourthWall.parseQueryVariables = function() {
+  FourthWall.parseQueryVariables = function () {
     let search = FourthWall._getLocationSearch();
     return search
       .replace(/(^\?)/, '')
@@ -137,21 +137,16 @@
     return value ? value === 'true' : defaultValue;
   };
 
-  FourthWall.isUserUnimportant = function (login) {
-    return FourthWall.filterUsers && !!FourthWall.importantUsers.length && !FourthWall.importantUsers.includes(login);
+  FourthWall.isUserImportant = function (login) {
+    return !FourthWall.filterUsers || !FourthWall.importantUsers.length || FourthWall.importantUsers.includes(login);
   };
 
   FourthWall.isPullWip = function (pull) {
     return FourthWall.wipStrings.some(s => pull.get('title').toUpperCase().includes(s.toUpperCase()));
   };
 
-  FourthWall.isWip = function(pull) {
-    for (const wipString of FourthWall.wipStrings) {
-      if (pull.get('title').toLowerCase().includes(wipString.toLowerCase())) {
-        return true;
-      }
-    }
-    return false;
+  FourthWall.shouldDisplayPull = function (pull, isRepoImportant) {
+    return isRepoImportant || FourthWall.isUserImportant(pull.user.login);
   };
 
   FourthWall.filterUsers = FourthWall.checkOptionEnabled('filterusers', true);

@@ -53,10 +53,10 @@
 
     fetch: function () {
       let models = [];
-      this.repos.each(function (repo) {
-        repo.pulls.each(function (pull) {
-          models.push(pull);
-        });
+      this.repos.forEach(repo => {
+        repo.pulls.forEach(pull => {
+          models.push(pull)
+        }, this);
         if (repo.master.get('failed')) {
           models.push(repo.master);
         }

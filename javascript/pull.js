@@ -40,7 +40,7 @@
         userName: this.collection.userName,
         repo: this.get('repo'),
         pullId: this.get('number')
-      }),
+      });
       this.on('change:head', function () {
         this.info.set('sha', this.get('head').sha);
       }, this);

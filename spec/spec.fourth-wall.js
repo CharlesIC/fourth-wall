@@ -174,18 +174,18 @@ describe("Fourth Wall", function () {
     });
   });
 
-  describe("isWip", function () {
+  describe("isPullWip", function () {
     for (const wipString of ["wip", "WIP", "DO NOT MERGE", "Do not Merge"]) {
-      it(`should return true if the title contains ${wipString}`, function() {
-        let pull = {get: function() { return `my title ${wipString} for PR`; }};
-        expect(FourthWall.isWip(pull)).toEqual(true);
+      it(`should return true if the title contains ${wipString}`, function () {
+        let pull = {get: () => `my title ${wipString} for PR`};
+        expect(FourthWall.isPullWip(pull)).toEqual(true);
       });
     }
 
     for (const nonWipString of ["WAP", "DO PLEASE MERGE"]) {
-      it(`should return false if the title contains ${nonWipString}`, function() {
-        let pull = {get: function() { return `my title ${nonWipString} for PR`; }};
-        expect(FourthWall.isWip(pull)).toEqual(false);
+      it(`should return false if the title contains ${nonWipString}`, function () {
+        let pull = {get: () => `my title ${nonWipString} for PR`};
+        expect(FourthWall.isPullWip(pull)).toEqual(false);
       });
     }
   });
@@ -208,29 +208,49 @@ describe("Fourth Wall", function () {
     });
   });
 
-  describe("isUserUnimportant", function () {
-    it("should return false if filter users flag not set", function () {
+  describe("isUserImportant", function () {
+    it("should return true if filterUsers flag not set", function () {
       FourthWall.filterUsers = false;
       FourthWall.importantUsers = ["user"];
-      expect(FourthWall.isUserUnimportant("user")).toEqual(false);
+      expect(FourthWall.isUserImportant("user")).toEqual(true);
     });
 
-    it("should return false if filter users flag is set but no important users have been specified", function () {
+    it("should return true if filterUsers flag is set but no important users have been specified", function () {
       FourthWall.filterUsers = true;
       FourthWall.importantUsers = [];
-      expect(FourthWall.isUserUnimportant("user")).toEqual(false);
+      expect(FourthWall.isUserImportant("user")).toEqual(true);
     });
 
-    it("should return false if user is in the important users list", function () {
+    it("should return true if user is in the important users list", function () {
       FourthWall.filterUsers = true;
       FourthWall.importantUsers = ["user"];
-      expect(FourthWall.isUserUnimportant("user")).toEqual(false);
+      expect(FourthWall.isUserImportant("user")).toEqual(true);
     });
 
-    it("should return true if user is not in the important users list", function () {
+    it("should return false if user is not in the important users list", function () {
       FourthWall.filterUsers = true;
       FourthWall.importantUsers = ["user"];
-      expect(FourthWall.isUserUnimportant("unimportant-user")).toEqual(true);
+      expect(FourthWall.isUserImportant("unimportant-user")).toEqual(false);
+    });
+  });
+
+  describe("shouldDisplayPull", function () {
+    it("should display pull if repo is important", function () {
+      spyOn(FourthWall, "isUserImportant").andReturn(false);
+      let pull = {user: {login: 'user'}};
+      expect(FourthWall.shouldDisplayPull(pull, true)).toEqual(true);
+    });
+
+    it("should display pull if user is important", function () {
+      spyOn(FourthWall, "isUserImportant").andReturn(true);
+      let pull = {user: {login: 'user'}};
+      expect(FourthWall.shouldDisplayPull(pull, false)).toEqual(true);
+    });
+
+    it("should not display pull if repo and user are important", function () {
+      spyOn(FourthWall, "isUserImportant").andReturn(false);
+      let pull = {user: {login: 'user'}};
+      expect(FourthWall.shouldDisplayPull(pull, false)).toEqual(false);
     });
   });
 
@@ -401,12 +421,12 @@ describe("Fourth Wall", function () {
       });
 
       it("fetches new comment data when pull data has been fetched", function () {
-        pull.fetch()
+        pull.fetch();
         expect(pull.comment.fetch).toHaveBeenCalled();
       });
 
       it("fetches new review comment data when pull data has been fetched", function () {
-        pull.fetch()
+        pull.fetch();
         expect(pull.reviewComment.fetch).toHaveBeenCalled();
       });
 
@@ -492,21 +512,50 @@ describe("Fourth Wall", function () {
         expect(pulls.url()).toEqual('https://api.base.url/repos/foo/bar/pulls');
       });
     });
+
+    describe("parse", function () {
+      it("only collects pull requests to display", function () {
+        let importantPull = "important-pull";
+        let pullData = [importantPull, "unimportant-pull"];
+        spyOn(FourthWall, "shouldDisplayPull").andCallFake(pull => pull === importantPull);
+
+        let result = FourthWall.Pulls.prototype.parse(pullData);
+
+        expect(result.length).toEqual(1);
+        expect(result[0]).toEqual(importantPull);
+      });
+    });
   });
 
   describe("ListItems", function () {
     describe("fetch", function () {
-      it("collects open pull requests from repos", function () {
-        var repo = new FourthWall.Repo({
-          userName: 'foo',
-          repo: 'bar'
+      beforeEach(function () {
+        spyOn(FourthWall.Comment.prototype, "fetch");
+      });
+      const createPull = () => new FourthWall.Pull({head: {sha: "sha"}}, {collection: {}});
+      const createRepo = (pull, important) => {
+        let repo = new FourthWall.Repo();
+        repo.pulls = new FourthWall.Pulls([pull], {
+          baseUrl: "baseUrl",
+          userName: "userName",
+          repo: "repo",
+          important: important
         });
-        repo.pulls.reset();
-        var items = new FourthWall.ListItems([], {
-          repos: new FourthWall.Repos([
+        return repo;
+      };
 
-          ])
+      it("collects pull requests from repos", function () {
+        let pull1 = createPull(), pull2 = createPull();
+        let items = new FourthWall.ListItems([], {
+          repos: new FourthWall.Repos([createRepo(pull1, true), createRepo(pull2, false)])
         });
+
+        items.fetch();
+
+        expect(items.repos.length).toEqual(2);
+        expect(items.models.length).toEqual(2);
+        expect(items.models[0]).toEqual(pull1);
+        expect(items.models[1]).toEqual(pull2);
       });
     });
   });

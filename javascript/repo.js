@@ -35,6 +35,5 @@
       this.pulls.fetch();
       this.master.fetch();
     }
-
   });
 }());

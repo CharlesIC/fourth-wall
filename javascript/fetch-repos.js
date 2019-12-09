@@ -20,10 +20,10 @@
     }
 
     var d = $.Deferred();
-    $.when.apply(null, promises).done(function() {
+    $.when.apply(null, promises).done(function () {
       var allRepos = [].reduce.call(arguments, FetchRepos.mergeRepoArrays, []);
 
-      allRepos = allRepos.filter(function(repo) {
+      allRepos = allRepos.filter(function (repo) {
         return FourthWall.filterRepos.indexOf(repo.repo) === -1;
       });
 
@@ -55,7 +55,7 @@
     // e.g. https://api.github.com/repos/roc/deploy-lag-radiator/contents/repos/performance-platform.json?ref=gh-pages
     return FourthWall.fetchDefer({
       url: FourthWall.fileUrl,
-      done: function(result) {
+      done: function (result) {
         var repos = [];
         if (result.content) {
           repos = JSON.parse(
@@ -65,7 +65,7 @@
             // we extend the item to ensure any provided baseUrls are kept
             return $.extend(item, {
               'userName': item.owner || item.userName,
-              'repo': item.name ||  item.repo
+              'repo': item.name || item.repo
             });
           });
         }
@@ -93,8 +93,8 @@
             repos = JSON.parse(fileData.content);
           } else if (language === "CSS") {
             var $custom_css = $('<style>');
-            $custom_css.text( fileData.content );
-            $('head').append( $custom_css );
+            $custom_css.text(fileData.content);
+            $('head').append($custom_css);
           }
         });
         return repos;
@@ -105,12 +105,12 @@
   var fetchReposFromTeams = function () {
     var promises = [];
 
-    FourthWall.getTeams().forEach(function(team) {
+    FourthWall.getTeams().forEach(function (team) {
       promises.push(fetchReposFromTeam(team));
     });
 
     var d = $.Deferred();
-    $.when.apply(null, promises).done(function() {
+    $.when.apply(null, promises).done(function () {
       var repos = [].reduce.call(arguments, FetchRepos.mergeRepoArrays, []);
       d.resolve(repos);
     });
@@ -118,14 +118,14 @@
     return d.promise();
   };
 
-  var fetchReposFromTeam = function(team) {
+  var fetchReposFromTeam = function (team) {
     var d = $.Deferred();
-    fetchTeamId(team).done(function(teamId) {
+    fetchTeamId(team).done(function (teamId) {
       FourthWall.fetchDefer({
         url: team.baseUrl + "/teams/" + teamId + "/repos",
-        data: { per_page: 100 },
+        data: {per_page: 100},
         done: function (result) {
-          d.resolve(result.map(function(item) {
+          d.resolve(result.map(function (item) {
             return {
               repo: item.name,
               userName: item.owner.login,
@@ -139,7 +139,7 @@
       FourthWall.fetchDefer({
         url: team.baseUrl + "/teams/" + teamId + "/members",
         done: function (result) {
-          result.forEach(function(member) {
+          result.forEach(function (member) {
             FourthWall.importantUsers.push(member.login)
           });
         }
@@ -148,12 +148,12 @@
     return d;
   };
 
-  var fetchTeamId = function(team) {
+  var fetchTeamId = function (team) {
     return FourthWall.fetchDefer({
       // team.list results are paginated, try and get as many in the first page
       // as possible to map slug-to-id (github max is 100 per-page)
       url: team.baseUrl + '/orgs/' + team.org + '/teams',
-      data: { per_page: 100 },
+      data: {per_page: 100},
       done: function (result) {
         for (var i = 0; i < result.length; i++) {
           if (result[i].slug === team.team) {
@@ -164,5 +164,4 @@
       }
     });
   };
-
 }());

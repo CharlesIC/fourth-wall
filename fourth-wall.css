@@ -78,9 +78,6 @@ body {
 #pulls li.age-old {
     background: #F47738;
 }
-#pulls li.unimportant-user.unimportant-repo {
-  display: none;
-}
 
 #pulls li h2 {
     margin:0;

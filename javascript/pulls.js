@@ -22,8 +22,12 @@
       ].join('/');
     },
 
-    fetch: function() {
+    fetch: function () {
       return FourthWall.overrideFetch.call(this, this.baseUrl);
+    },
+
+    parse: function (response) {
+      return response.filter(pull => FourthWall.shouldDisplayPull(pull, this.important));
     }
   });
 }());

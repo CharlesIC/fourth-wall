@@ -21,7 +21,7 @@
 
       this.$el.addClass(this.ageClass(this.model.get('elapsed_time')));
 
-      if (FourthWall.isUserUnimportant(this.model.get('user').login)) {
+      if (!FourthWall.isUserImportant(this.model.get('user').login)) {
         this.$el.addClass('unimportant-user');
       }
 
