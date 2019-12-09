@@ -44,7 +44,7 @@
       let timeA = a.get('elapsed_time'),
         timeB = b.get('elapsed_time');
 
-      if ( FourthWall.getQueryVariable('recent') ) {
+      if (FourthWall.sortPullsByMostRecent) {
         return this.cmp(timeB, timeA);
       } else {
         return this.cmp(timeA, timeB);

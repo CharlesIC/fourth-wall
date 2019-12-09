@@ -21,7 +21,7 @@
 
       this.$el.addClass(this.ageClass(this.model.get('elapsed_time')));
 
-      if (FourthWall.filterUsers && FourthWall.importantUsers.length > 0 && $.inArray(this.model.get('user').login, FourthWall.importantUsers) === -1) {
+      if (FourthWall.isUserUnimportant(this.model.get('user').login)) {
         this.$el.addClass('unimportant-user');
       }
 
@@ -29,7 +29,7 @@
         this.$el.addClass('unimportant-repo');
       }
 
-      if (FourthWall.isWip(this.model)) {
+      if (FourthWall.isPullWip(this.model)) {
         switch (FourthWall.wipHandling) {
           case 'small':
             this.$el.addClass("wip");

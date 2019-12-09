@@ -2,80 +2,62 @@
   "use strict";
   window.FourthWall = window.FourthWall || {};
 
-  FourthWall.importantUsers = [];
-
-  FourthWall.getQueryVariables = function(search) {
-    search = search || FourthWall._getLocationSearch();
-    return search
-      .replace(/(^\?)/,'')
-      .split("&")
-      .reduce( function(params, n) {
-        n = n.split("=");
-        var arrayKey = /^(.*)\[\]$/.exec(n[0]);
-        if (arrayKey) {
-          if (params[arrayKey[1]] instanceof Array) {
-            params[arrayKey[1]].push(n[1]);
-          } else {
-            params[arrayKey[1]] = [n[1]];
-          }
-        } else {
-          params[n[0]] = n[1];
-        }
-        return params;
-      }, {});
+  FourthWall.getQueryVariables = function () {
+    FourthWall.queryVariables = FourthWall.queryVariables || FourthWall.parseQueryVariables();
+    return FourthWall.queryVariables;
   };
 
-  FourthWall.getQueryVariable = function (name, search) {
-    return FourthWall.getQueryVariables(search)[name];
+  FourthWall.getQueryVariable = function (name) {
+    return FourthWall.getQueryVariables()[name];
   };
 
-  FourthWall._getLocationSearch = function() {
+  FourthWall._getLocationSearch = function () {
     return window.location.search;
   };
 
-  FourthWall.buildQueryString = function(params) {
-    var param_string = $.param(params);
-    if(param_string.length > 0) {
+  FourthWall.buildQueryString = function (params) {
+    let param_string = $.param(params);
+    if (param_string.length > 0) {
       param_string = "?" + param_string;
     }
     return param_string;
   };
 
   FourthWall.getToken = function (hostname) {
-    var token = FourthWall.getQueryVariable(hostname+'_token');
-    if (token === undefined && hostname == 'api.github.com') {
+    let token = FourthWall.getQueryVariable(hostname + '_token');
+    if (token === undefined && hostname === 'api.github.com') {
       token = FourthWall.getQueryVariable('token');
     }
     return token;
   };
 
   FourthWall.getTokenFromUrl = function (url) {
-    var a = document.createElement('a');
+    let a = document.createElement('a');
     a.href = url;
     return FourthWall.getToken(a.hostname);
   };
 
-  FourthWall.hasTeams = function() {
+  FourthWall.hasTeams = function () {
     return FourthWall.getTeams().length > 0;
   };
 
-  FourthWall.getTeams = function() {
-    var params = FourthWall.getQueryVariables();
-    var teams = [];
-    Object.keys(params).filter(function(key) {
-      var match = key.match(/team$/);
+  FourthWall.getTeams = function () {
+    let params = FourthWall.getQueryVariables();
+    let teams = [];
+    Object.keys(params).filter(function (key) {
+      let match = key.match(/team$/);
       return match && match[0] == 'team';
-    }).forEach(function(key) {
-      var hostname = key.match(/^(.*?)_?team$/)[1];
+    }).forEach(function (key) {
+      let hostname = key.match(/^(.*?)_?team$/)[1];
       if (hostname === "") {
         hostname = "api.github.com";
       }
-      var teamStrings = params[key];
-      if (! (teamStrings instanceof Array)) {
+      let teamStrings = params[key];
+      if (!(teamStrings instanceof Array)) {
         teamStrings = [teamStrings];
       }
-      teamStrings.forEach(function(teamStr) {
-        var fullTeamName = stripSlash(teamStr).split('/');
+      teamStrings.forEach(function (teamStr) {
+        let fullTeamName = teamStr.split('/');
         if (fullTeamName.length !== 2) {
           throw "Team name must contain a slash {org}/{team}";
         }
@@ -98,29 +80,51 @@
     }
   }
 
-  FourthWall.fetchDefer = function(options) {
-    var d = $.Deferred();
+  FourthWall.parseQueryVariables = function() {
+    let search = FourthWall._getLocationSearch();
+    return search
+      .replace(/(^\?)/, '')
+      .replace(/\/$/, '')
+      .split("&")
+      .reduce(function (params, n) {
+        n = n.split("=");
+        let arrayKey = /^(.*)\[\]$/.exec(n[0]);
+        if (arrayKey) {
+          if (params[arrayKey[1]] instanceof Array) {
+            params[arrayKey[1]].push(n[1]);
+          } else {
+            params[arrayKey[1]] = [n[1]];
+          }
+        } else {
+          params[n[0]] = n[1];
+        }
+        return params;
+      }, {});
+  };
+
+  FourthWall.fetchDefer = function (options) {
+    let d = $.Deferred();
     $.ajax({
       type: "GET",
       beforeSend: setupAuthentication(options.url),
       url: options.url,
       data: options.data
-    }).done(function(result) {
+    }).done(function (result) {
       d.resolve(options.done(result));
     }).fail(d.reject);
 
     return d.promise();
   };
 
-  FourthWall.overrideFetch = function(url) {
+  FourthWall.overrideFetch = function (url) {
     return Backbone.Model.prototype.fetch.apply(this, [{
       beforeSend: setupAuthentication(url)
     }]);
   };
 
-  var setupAuthentication = function (baseUrl) {
-    return function(xhr) {
-      var token = FourthWall.getTokenFromUrl(baseUrl);
+  let setupAuthentication = function (baseUrl) {
+    return function (xhr) {
+      let token = FourthWall.getTokenFromUrl(baseUrl);
       if (token !== false && token !== '') {
         xhr.setRequestHeader('Authorization', 'token ' + token);
         xhr.setRequestHeader('Accept', 'application/vnd.github.black-cat-preview+json');
@@ -128,11 +132,17 @@
     };
   };
 
-  // hack for SimpleHTTPServer appending a slash
-  var stripSlash = function(string){
-    if (string) {
-      return string.replace(/\/$/, '');
-    }
+  FourthWall.checkOptionEnabled = function (name, defaultValue) {
+    let value = FourthWall.getQueryVariable(name);
+    return value ? value === 'true' : defaultValue;
+  };
+
+  FourthWall.isUserUnimportant = function (login) {
+    return FourthWall.filterUsers && !!FourthWall.importantUsers.length && !FourthWall.importantUsers.includes(login);
+  };
+
+  FourthWall.isPullWip = function (pull) {
+    return FourthWall.wipStrings.some(s => pull.get('title').toUpperCase().includes(s.toUpperCase()));
   };
 
   FourthWall.isWip = function(pull) {
@@ -144,25 +154,16 @@
     return false;
   };
 
-  FourthWall.filterUsers = !!stripSlash(
-    FourthWall.getQueryVariable('filterusers')
-  );
+  FourthWall.filterUsers = FourthWall.checkOptionEnabled('filterusers', true);
+  FourthWall.sortPullsByMostRecent = FourthWall.checkOptionEnabled('recent', true);
+  FourthWall.gistId = FourthWall.getQueryVariable('gist');
+  FourthWall.fileUrl = FourthWall.getQueryVariable('file');
+  FourthWall.wipHandling = (FourthWall.getQueryVariable('wiphandling') || 'small');
 
   //to deal with fact that query var could be string or array,
   // put query var in array and then flatten it all out
-  var repos = [FourthWall.getQueryVariable('filterrepo') || ''];
-  FourthWall.filterRepos = [].concat.apply([], repos)
-    .map(stripSlash);
+  FourthWall.filterRepos = [FourthWall.getQueryVariable('filterrepo') || []].flat();
 
-  FourthWall.gistId = stripSlash(
-    FourthWall.getQueryVariable('gist')
-  );
-  FourthWall.fileUrl = stripSlash(
-    FourthWall.getQueryVariable('file')
-  );
   FourthWall.importantUsers = [];
-
-  FourthWall.wipHandling = (FourthWall.getQueryVariable('wiphandling') || 'small');
-
   FourthWall.wipStrings = ['WIP', 'DO NOT MERGE', 'REVIEW ONLY'];
 })();

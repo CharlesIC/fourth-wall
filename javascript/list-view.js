@@ -10,8 +10,8 @@
     render: function () {
       this.$el.empty();
       this.lis = [];
-      this.collection.each(function (model) {
-        var View;
+      this.collection.each(model => {
+        let View;
         if (model instanceof FourthWall.MasterStatus) {
           View = FourthWall.MasterView;
         } else if (model instanceof FourthWall.Pull) {
@@ -21,7 +21,7 @@
           return;
         }
 
-        var view = new View({
+        let view = new View({
           model: model,
           list: this
         });
