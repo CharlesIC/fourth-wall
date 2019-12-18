@@ -111,9 +111,27 @@
       data: options.data
     }).done(function (result) {
       d.resolve(options.done(result));
-    }).fail(d.reject);
+    }).fail(function (result) {
+      console.log(`Failed call to ${options.url} (${result.status})`);
+      console.log(result.responseText);
+      FourthWall.checkRateLimit(result);
+      d.reject();
+    });
 
     return d.promise();
+  };
+
+  FourthWall.checkRateLimit = function (result) {
+    if (!result.hasOwnProperty('getResponseHeader')) return;
+    let rateLimit = result.getResponseHeader('x-ratelimit-limit');
+    let rateLimitRemaining = result.getResponseHeader('x-ratelimit-remaining');
+    let rateLimitReset = parseInt(result.getResponseHeader('x-ratelimit-reset'));
+    let rateLimitResetDate = rateLimitReset ? new Date(rateLimitReset * 1000) : null;
+    let rateLimitResetMins = rateLimitResetDate ? Math.floor((rateLimitResetDate - new Date()) / 1000 / 60) : null;
+    if (rateLimitRemaining === '0') console.log('Exceeded rate limit.');
+    if (rateLimit && rateLimitRemaining && rateLimitReset) {
+      console.log(`${rateLimitRemaining} of ${rateLimit} requests remaining. Limit reset in ${rateLimitResetMins} mins (at ${rateLimitResetDate})`);
+    }
   };
 
   FourthWall.overrideFetch = function (url) {

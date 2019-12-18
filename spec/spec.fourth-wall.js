@@ -254,6 +254,34 @@ describe("Fourth Wall", function () {
     });
   });
 
+  describe("checkRateLimit", function () {
+    it("logs remaining requests if rate limiting headers present in the response", function () {
+      let response = {
+        getResponseHeader: header =>
+          header === "x-ratelimit-limit" ? '5000' :
+            header === "x-ratelimit-remaining" ? '2400' :
+              header === "x-ratelimit-reset" ? '1576634532' : undefined
+      };
+      spyOn(console, "log");
+      FourthWall.checkRateLimit(response);
+      expect(console.log.argsForCall[0]).toMatch(/^\d+ of \d+ requests remaining\. Limit reset in .* mins.*/);
+    });
+
+    it("doesn't log if rate limiting headers not set in the response", function () {
+      let response = {getResponseHeader: header => null};
+      spyOn(console, "log");
+      FourthWall.checkRateLimit(response);
+      expect(console.log).not.toHaveBeenCalled();
+    });
+
+    it("doesn't log if response doesn't have headers", function () {
+      let response = {};
+      spyOn(console, "log");
+      FourthWall.checkRateLimit(response);
+      expect(console.log).not.toHaveBeenCalled();
+    });
+  });
+
   describe("FetchRepos", function () {
     describe("mergeRepoArrays", function () {
       it("should merge two repo arrays", function () {
