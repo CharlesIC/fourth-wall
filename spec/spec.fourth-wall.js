@@ -282,30 +282,75 @@ describe("Fourth Wall", function () {
   });
 
   describe("FetchRepos", function () {
-    describe("mergeRepoArrays", function () {
-      it("should merge two repo arrays", function () {
-        let repos1 = [{userName: "example", repo: "example"}],
-          repos2 = [{userName: "example", repo: "another"}];
+    beforeAll(() => FourthWall.gitHubReposBaseUrl = "https://github-repos");
 
-        let result = FourthWall.FetchRepos.mergeRepoArrays(repos1, repos2);
+    describe("getUniqueRepos", function () {
+      it("should return unique repos with their original set of properties", function () {
+        let repo1 = {userName: "example", repo: "example"},
+          repo2 = {userName: "example", repo: "another"};
 
-        let expected = [
-          {userName: "example", repo: "example"},
-          {userName: "example", repo: "another"},
-        ];
-        expect(_.isEqual(result, expected)).toEqual(true);
+        let result = FourthWall.FetchRepos.getUniqueRepos([repo1, repo2]);
+
+        expect(result.length).toEqual(2);
+        expect(result[0]).toEqual(repo1);
+        expect(result[1]).toEqual(repo2);
       });
 
       it("should not duplicate repos", function () {
-        let repos1 = [{userName: "example", repo: "example"}],
-          repos2 = [{userName: "example", repo: "example"}];
+        let repo1 = {userName: "example", repo: "example"},
+          repo2 = {userName: "example", repo: "example"};
 
-        let result = FourthWall.FetchRepos.mergeRepoArrays(repos1, repos2);
+        let result = FourthWall.FetchRepos.getUniqueRepos([repo1, repo2]);
 
-        let expected = [
-          {userName: "example", repo: "example"},
-        ];
-        expect(_.isEqual(result, expected)).toEqual(true);
+        expect(result.length).toEqual(1);
+        expect(result[0]).toEqual(repo1);
+      });
+
+      it("should merge duplicated repo with different importance", function () {
+        let unimportantRepo = {userName: "example", repo: "example", important: false},
+          importantRepo = {userName: "example", repo: "example", important: true},
+          repo = {userName: "example", repo: "example"};
+
+        let result = FourthWall.FetchRepos.getUniqueRepos([unimportantRepo, importantRepo, repo]);
+
+        expect(result.length).toEqual(1);
+        expect(result[0]).toEqual(importantRepo);
+      });
+
+      it("should merge duplicated repo with default base URLs", function () {
+        let repo1 = {userName: "example", repo: "example", baseUrl: ""},
+          repo2 = {userName: "example", repo: "example", baseUrl: "https://github-repos"},
+          repo3 = {userName: "example", repo: "example", baseUrl: "https://other-service/repos"},
+          repo4 = {userName: "example", repo: "example"},
+          repo5 = {userName: "example", repo: "example-2"};
+
+        let result = FourthWall.FetchRepos.getUniqueRepos([repo1, repo2, repo3, repo4, repo5]);
+
+        expect(result.length).toEqual(3);
+        expect(result[0]).toEqual(repo2);
+        expect(result[1]).toEqual(repo3);
+        expect(result[2]).toEqual(repo5);
+      });
+    });
+
+    describe("fetchFromEverywhere", function () {
+      afterAll(() => FourthWall.fileUrl = undefined);
+
+      it("exclude unwanted and duplicated repos", async function () {
+        FourthWall.gistId = "gist-id";
+        FourthWall.fileUrl = "file-url";
+        FourthWall.filterRepos = ["unwanted-repo"];
+        FourthWall.gitHubReposBaseUrl = "https://github-repos";
+        let unwantedRepo = {userName: "userName", repo: "unwanted-repo"};
+        let importantRepo = {userName: "userName", repo: "wanted-repo", important: true};
+        let importantRepoDupe = {userName: "userName", repo: "wanted-repo"};
+        spyOn(FourthWall, "fetchDefer").and.returnValues([unwantedRepo, importantRepo], [importantRepoDupe]);
+
+        let processedRepos = await FourthWall.FetchRepos.fetchFromEverywhere();
+
+        expect(FourthWall.fetchDefer).toHaveBeenCalledTimes(2);
+        expect(processedRepos.length).toEqual(1);
+        expect(processedRepos[0]).toEqual(importantRepo);
       });
     });
   });

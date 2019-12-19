@@ -167,6 +167,8 @@
     return isRepoImportant || FourthWall.isUserImportant(pull.user.login);
   };
 
+  FourthWall.gitHubReposBaseUrl = 'https://api.github.com/repos';
+
   FourthWall.filterUsers = FourthWall.checkOptionEnabled('filterusers', true);
   FourthWall.sortPullsByMostRecent = FourthWall.checkOptionEnabled('recent', true);
   FourthWall.gistId = FourthWall.getQueryVariable('gist');

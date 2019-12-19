@@ -1,62 +1,63 @@
-(function() {
-  "use strict"
+(function () {
+  "use strict";
   window.FourthWall = window.FourthWall || {};
 
   FourthWall.FetchRepos = {};
 
-  var FetchRepos = FourthWall.FetchRepos;
-
   FourthWall.FetchRepos.fetchFromEverywhere = function () {
-    var promises = [];
+    let promises = [];
 
     if (FourthWall.fileUrl) {
       promises.push(fetchReposFromFileUrl());
     }
+
     if (FourthWall.gistId) {
       promises.push(fetchReposFromGist());
     }
+
     if (FourthWall.hasTeams()) {
       promises.push(fetchReposFromTeams());
     }
 
-    var d = $.Deferred();
-    $.when.apply(null, promises).done(function () {
-      var allRepos = [].reduce.call(arguments, FetchRepos.mergeRepoArrays, []);
-
-      allRepos = allRepos.filter(function (repo) {
-        return FourthWall.filterRepos.indexOf(repo.repo) === -1;
-      });
-
+    let d = $.Deferred();
+    $.when.apply(null, promises).done(function (results) {
+      let allRepos = FourthWall.FetchRepos.getUniqueRepos(results)
+        .filter(r => !FourthWall.filterRepos.includes(r.repo));
       d.resolve(allRepos);
     });
     return d;
   };
 
-  // exposed so that it can be tested
-  FourthWall.FetchRepos.mergeRepoArrays = function(repos1, repos2) {
-    var result = _.clone(repos1);
-    if (repos2) {
-      repos2.forEach(function(repo) {
-        var found = result.some(function(testRepo) {
-          return _.isEqual(
-            { userName: repo.userName, repo: repo.repo, baseUrl: repo.baseUrl || 'https://api.github.com/repos' },
-            { userName: testRepo.userName, repo: testRepo.repo, baseUrl: testRepo.baseUrl || 'https://api.github.com/repos' }
-          );
-        });
-        if (!found) {
-          result.push(repo);
+  FourthWall.FetchRepos.getUniqueRepos = function (repos) {
+    return Object.values(repos
+      .map(r => ({hash: createRepoHash(r), value: r}))
+      .reduce((uniqueRepos, repo) => {
+        if (repo.hash in uniqueRepos) {
+          let important = uniqueRepos[repo.hash].important || repo.value.important;
+          let baseUrl = uniqueRepos[repo.hash].baseUrl || repo.value.baseUrl;
+          if (important !== undefined) uniqueRepos[repo.hash].important = important;
+          if (baseUrl) uniqueRepos[repo.hash].baseUrl = baseUrl;
+        } else {
+          uniqueRepos[repo.hash] = repo.value;
         }
-      });
-    }
-    return result;
+        return uniqueRepos
+      }, {}));
   };
 
-  var fetchReposFromFileUrl = function () {
+  let createRepoHash = function (repo) {
+    return JSON.stringify({
+      userName: repo.userName,
+      repo: repo.repo,
+      baseUrl: repo.baseUrl || FourthWall.gitHubReposBaseUrl
+    });
+  };
+
+  let fetchReposFromFileUrl = function () {
     // e.g. https://api.github.com/repos/roc/deploy-lag-radiator/contents/repos/performance-platform.json?ref=gh-pages
     return FourthWall.fetchDefer({
       url: FourthWall.fileUrl,
       done: function (result) {
-        var repos = [];
+        let repos = [];
         if (result.content) {
           repos = JSON.parse(
             atob(result.content)
@@ -74,27 +75,22 @@
     });
   };
 
-  var fetchReposFromGist = function () {
+  let fetchReposFromGist = function () {
     return FourthWall.fetchDefer({
       url: "https://api.github.com/gists/" + FourthWall.gistId,
-      done: function(result) {
-        var repos = [];
-        Object.keys(result.files).forEach(function(file) {
-          var fileData = result.files[file],
-              language = fileData.language;
-          if (file == "users.json") {
-            if (fileData.content) {
-              FourthWall.importantUsers = $.merge(
-                FourthWall.importantUsers,
-                JSON.parse(fileData.content)
-              );
-            }
-          } else if ($.inArray(language, ['JavaScript', 'JSON', null]) !== -1) {
-            repos = JSON.parse(fileData.content);
+      done: function (result) {
+        let repos = [];
+        Object.keys(result.files).forEach(file => {
+          let fileData = result.files[file],
+            language = fileData.language;
+          if (file === "users.json" && fileData.content) {
+            FourthWall.importantUsers = $.merge(FourthWall.importantUsers, JSON.parse(fileData.content));
           } else if (language === "CSS") {
-            var $custom_css = $('<style>');
+            let $custom_css = $('<style>');
             $custom_css.text(fileData.content);
             $('head').append($custom_css);
+          } else if (language === 'JavaScript' || language === 'JSON' || !language) {
+            repos = JSON.parse(fileData.content);
           }
         });
         return repos;
@@ -102,24 +98,24 @@
     });
   };
 
-  var fetchReposFromTeams = function () {
-    var promises = [];
+  let fetchReposFromTeams = function () {
+    let promises = [];
 
     FourthWall.getTeams().forEach(function (team) {
       promises.push(fetchReposFromTeam(team));
     });
 
-    var d = $.Deferred();
-    $.when.apply(null, promises).done(function () {
-      var repos = [].reduce.call(arguments, FetchRepos.mergeRepoArrays, []);
+    let d = $.Deferred();
+    $.when.apply(null, promises).done(function (results) {
+      let repos = FourthWall.FetchRepos.getUniqueRepos(results);
       d.resolve(repos);
     });
 
     return d.promise();
   };
 
-  var fetchReposFromTeam = function (team) {
-    var d = $.Deferred();
+  let fetchReposFromTeam = function (team) {
+    let d = $.Deferred();
     fetchTeamId(team).done(function (teamId) {
       FourthWall.fetchDefer({
         url: team.baseUrl + "/teams/" + teamId + "/repos",
@@ -148,14 +144,14 @@
     return d;
   };
 
-  var fetchTeamId = function (team) {
+  let fetchTeamId = function (team) {
     return FourthWall.fetchDefer({
       // team.list results are paginated, try and get as many in the first page
       // as possible to map slug-to-id (github max is 100 per-page)
       url: team.baseUrl + '/orgs/' + team.org + '/teams',
       data: {per_page: 100},
       done: function (result) {
-        for (var i = 0; i < result.length; i++) {
+        for (let i = 0; i < result.length; i++) {
           if (result[i].slug === team.team) {
             return result[i].id;
           }
