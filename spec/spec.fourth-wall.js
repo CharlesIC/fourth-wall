@@ -1,30 +1,29 @@
 function setupMoment(date, anObject) {
-  spyOn(anObject, "moment");
-  anObject.moment.plan = function () {
-    let realMoment = anObject.moment.originalValue;
+  let realMoment = anObject.moment;
+  spyOn(anObject, "moment").and.callFake(function () {
     // set "now" to a fixed date to enable static expectations
     if (!arguments.length) {
       return realMoment(date);
     }
     return realMoment.apply(null, arguments);
-  }
+  });
 }
 
 describe("Fourth Wall", function () {
 
   describe("parseQueryVariables", function () {
     it("should convert a query string into a params object", function () {
-      spyOn(FourthWall, '_getLocationSearch').andReturn("?ref=gh-pages&token=nonsense");
+      spyOn(FourthWall, '_getLocationSearch').and.returnValue("?ref=gh-pages&token=nonsense");
       let query_params = FourthWall.parseQueryVariables();
       expect(query_params).toEqual({'ref': 'gh-pages', 'token': 'nonsense'});
     });
     it("should return current location params object if no query string is provided", function () {
-      spyOn(FourthWall, '_getLocationSearch').andReturn('?foo=bar&me=you');
+      spyOn(FourthWall, '_getLocationSearch').and.returnValue('?foo=bar&me=you');
       let query_params = FourthWall.parseQueryVariables();
       expect(query_params).toEqual({foo: 'bar', me: 'you'});
     });
     it("should handle array parameters with [] keys", function () {
-      spyOn(FourthWall, '_getLocationSearch').andReturn("?ref=gh-pages&token[]=nonsense&token[]=foo");
+      spyOn(FourthWall, '_getLocationSearch').and.returnValue("?ref=gh-pages&token[]=nonsense&token[]=foo");
       let query_params = FourthWall.parseQueryVariables();
       expect(query_params).toEqual({'ref': 'gh-pages', 'token': ['nonsense', 'foo']});
     });
@@ -34,12 +33,12 @@ describe("Fourth Wall", function () {
       FourthWall.queryVariables = null;
     });
     it("should get a query parameter from the provided query string", function () {
-      spyOn(FourthWall, '_getLocationSearch').andReturn('?foo=everything');
+      spyOn(FourthWall, '_getLocationSearch').and.returnValue('?foo=everything');
       let value = FourthWall.getQueryVariable('foo');
       expect(value).toEqual('everything');
     });
     it("should get a query parameter from the current location", function () {
-      spyOn(FourthWall, '_getLocationSearch').andReturn('?foo=location');
+      spyOn(FourthWall, '_getLocationSearch').and.returnValue('?foo=location');
       let value = FourthWall.getQueryVariable('foo');
       expect(value).toEqual('location');
     });
@@ -57,14 +56,13 @@ describe("Fourth Wall", function () {
 
   describe("getToken", function () {
     beforeEach(function () {
-      spyOn(FourthWall, 'getQueryVariable');
-      FourthWall.getQueryVariable.plan = function (name) {
+      spyOn(FourthWall, 'getQueryVariable').and.callFake(function (name) {
         return {
           "api.github.com_token": "com-token",
           "token": "default-token",
           "github.gds_token": "gds-token"
         }[name];
-      };
+      });
     });
 
     it("returns correct enterprise token", function () {
@@ -76,12 +74,12 @@ describe("Fourth Wall", function () {
     });
 
     it("falls back to default token for github.com", function () {
-      FourthWall.getQueryVariable.plan = function (name) {
+      FourthWall.getQueryVariable.and.callFake(function (name) {
         return {
           "token": "default-token",
           "github.gds_token": "gds-token"
         }[name];
-      };
+      });
 
       expect(FourthWall.getToken('api.github.com')).toEqual("default-token");
     })
@@ -105,7 +103,7 @@ describe("Fourth Wall", function () {
 
   describe("getTeams", function () {
     it("should return an array of teams", function () {
-      spyOn(FourthWall, "getQueryVariables").andReturn({team: "myorg/myteam"});
+      spyOn(FourthWall, "getQueryVariables").and.returnValue({team: "myorg/myteam"});
       let teams = FourthWall.getTeams();
 
       let expected = {
@@ -119,7 +117,7 @@ describe("Fourth Wall", function () {
     });
 
     it("should return an array with a github enterprise team", function () {
-      spyOn(FourthWall, "getQueryVariables").andReturn({"github.gds_team": "myorg/myteam"});
+      spyOn(FourthWall, "getQueryVariables").and.returnValue({"github.gds_team": "myorg/myteam"});
       let teams = FourthWall.getTeams();
 
       expect(teams.length).toBe(1);
@@ -133,7 +131,7 @@ describe("Fourth Wall", function () {
     });
 
     it("should handle multiple teams for a given instance", function () {
-      spyOn(FourthWall, "getQueryVariables").andReturn({
+      spyOn(FourthWall, "getQueryVariables").and.returnValue({
         "team": ["org1/team1", "org2/team2"],
         "github.gds_team": ["myorg/myteam", "otherorg/team2"]
       });
@@ -168,7 +166,7 @@ describe("Fourth Wall", function () {
     });
 
     it("should return an empty array if no teams are set", function () {
-      spyOn(FourthWall, "getQueryVariables").andReturn({"foo": "bar"});
+      spyOn(FourthWall, "getQueryVariables").and.returnValue({"foo": "bar"});
       let teams = FourthWall.getTeams();
       expect(teams).toEqual([]);
     });
@@ -192,17 +190,17 @@ describe("Fourth Wall", function () {
 
   describe("checkOptionEnabled", function () {
     it("should return true if option set to true in query params", function () {
-      spyOn(FourthWall, "getQueryVariable").andReturn("true");
+      spyOn(FourthWall, "getQueryVariable").and.returnValue("true");
       expect(FourthWall.checkOptionEnabled("test", false)).toEqual(true);
     });
 
     it("should return false if option set to false in query params", function () {
-      spyOn(FourthWall, "getQueryVariable").andReturn('false');
+      spyOn(FourthWall, "getQueryVariable").and.returnValue('false');
       expect(FourthWall.checkOptionEnabled("test", true)).toEqual(false);
     });
 
     it("should return default value if option is not set in query params", function () {
-      spyOn(FourthWall, "getQueryVariable").andReturn(undefined);
+      spyOn(FourthWall, "getQueryVariable").and.returnValue(undefined);
       expect(FourthWall.checkOptionEnabled("test", true)).toEqual(true);
       expect(FourthWall.checkOptionEnabled("test", false)).toEqual(false);
     });
@@ -236,19 +234,19 @@ describe("Fourth Wall", function () {
 
   describe("shouldDisplayPull", function () {
     it("should display pull if repo is important", function () {
-      spyOn(FourthWall, "isUserImportant").andReturn(false);
+      spyOn(FourthWall, "isUserImportant").and.returnValue(false);
       let pull = {user: {login: 'user'}};
       expect(FourthWall.shouldDisplayPull(pull, true)).toEqual(true);
     });
 
     it("should display pull if user is important", function () {
-      spyOn(FourthWall, "isUserImportant").andReturn(true);
+      spyOn(FourthWall, "isUserImportant").and.returnValue(true);
       let pull = {user: {login: 'user'}};
       expect(FourthWall.shouldDisplayPull(pull, false)).toEqual(true);
     });
 
     it("should not display pull if repo and user are important", function () {
-      spyOn(FourthWall, "isUserImportant").andReturn(false);
+      spyOn(FourthWall, "isUserImportant").and.returnValue(false);
       let pull = {user: {login: 'user'}};
       expect(FourthWall.shouldDisplayPull(pull, false)).toEqual(false);
     });
@@ -262,9 +260,10 @@ describe("Fourth Wall", function () {
             header === "x-ratelimit-remaining" ? '2400' :
               header === "x-ratelimit-reset" ? '1576634532' : undefined
       };
+
       spyOn(console, "log");
       FourthWall.checkRateLimit(response);
-      expect(console.log.argsForCall[0]).toMatch(/^\d+ of \d+ requests remaining\. Limit reset in .* mins.*/);
+      expect(console.log.calls.first().args[0]).toMatch(/^\d+ of \d+ requests remaining\. Limit reset in .* mins.*/);
     });
 
     it("doesn't log if rate limiting headers not set in the response", function () {
@@ -325,35 +324,35 @@ describe("Fourth Wall", function () {
 
       it("updates the repo list every 15 minutes by default", function () {
         repos.schedule();
-        expect(repos.updateList.callCount).toEqual(1);
-        expect(setInterval.argsForCall[0][1]).toEqual(900000);
-        let callback = setInterval.argsForCall[0][0];
+        expect(repos.updateList.calls.count()).toEqual(1);
+        expect(setInterval.calls.first().args[1]).toEqual(900000);
+        let callback = setInterval.calls.first().args[0];
         callback();
-        expect(repos.updateList.callCount).toEqual(2);
+        expect(repos.updateList.calls.count()).toEqual(2);
       });
 
       it("updates the repo list at a configurable interval", function () {
-        FourthWall.getQueryVariable.andReturn(120);
+        FourthWall.getQueryVariable.and.returnValue(120);
         repos.schedule();
-        expect(setInterval.argsForCall[0][1]).toEqual(120000);
-        let callback = setInterval.argsForCall[0][0];
+        expect(setInterval.calls.argsFor(0)[1]).toEqual(120000);
+        let callback = setInterval.calls.argsFor(0)[0];
         callback();
         expect(repos.updateList).toHaveBeenCalled();
       });
 
       it("updates the status every 60 seconds by default", function () {
         repos.schedule();
-        expect(setInterval.argsForCall[1][1]).toEqual(60000);
-        let callback = setInterval.argsForCall[1][0];
+        expect(setInterval.calls.argsFor(1)[1]).toEqual(60000);
+        let callback = setInterval.calls.argsFor(1)[0];
         callback();
         expect(repos.fetch).toHaveBeenCalled();
       });
 
       it("updates the status at a configurable interval", function () {
-        FourthWall.getQueryVariable.andReturn(10);
+        FourthWall.getQueryVariable.and.returnValue(10);
         repos.schedule();
-        expect(setInterval.argsForCall[1][1]).toEqual(10000);
-        let callback = setInterval.argsForCall[1][0];
+        expect(setInterval.calls.argsFor(1)[1]).toEqual(10000);
+        let callback = setInterval.calls.argsFor(1)[0];
         callback();
         expect(repos.fetch).toHaveBeenCalled();
       });
@@ -496,7 +495,7 @@ describe("Fourth Wall", function () {
 
     describe("parse", function () {
       it("calculates seconds since pull request creation date", function () {
-        spyOn(FourthWall.Pull.prototype, "elapsedSeconds").andReturn(60);
+        spyOn(FourthWall.Pull.prototype, "elapsedSeconds").and.returnValue(60);
         spyOn(FourthWall.Comment.prototype, "fetch");
         spyOn(FourthWall.Status.prototype, "fetch");
         let pull = new FourthWall.Pull({
@@ -512,7 +511,7 @@ describe("Fourth Wall", function () {
 
     describe("elapsedSeconds", function () {
       it("calculates seconds since creation date", function () {
-        setupMoment("2013-09-09T10:01:00+01:00", window)
+        setupMoment("2013-09-09T10:01:00+01:00", window);
         spyOn(FourthWall.Comment.prototype, "fetch");
         spyOn(FourthWall.Status.prototype, "fetch");
         let pull = new FourthWall.Pull({
@@ -545,7 +544,7 @@ describe("Fourth Wall", function () {
       it("only collects pull requests to display", function () {
         let importantPull = "important-pull";
         let pullData = [importantPull, "unimportant-pull"];
-        spyOn(FourthWall, "shouldDisplayPull").andCallFake(pull => pull === importantPull);
+        spyOn(FourthWall, "shouldDisplayPull").and.callFake(pull => pull === importantPull);
 
         let result = FourthWall.Pulls.prototype.parse(pullData);
 

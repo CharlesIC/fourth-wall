@@ -20,10 +20,22 @@ it('passes all tests', async (done) => {
   // TODO: make this a generic url to work locally or in Travis
   // await page.goto('file:///Users/alistairlaing/work/fourth-wall/spec/index.html')
   await page.goto('http://localhost:8000/spec/index.html');
-  await page.waitForSelector('.passingAlert');
-  const passed = await page.evaluate(() => document.querySelector('.passingAlert').textContent);
+  await page.waitForSelector('.jasmine-overall-result.jasmine-bar');
+  const result = await page.evaluate(() =>
+    document.querySelector('.jasmine-overall-result.jasmine-bar.jasmine-passed, .jasmine-overall-result.jasmine-bar.jasmine-failed').textContent);
 
-  console.log(passed);
-  expect(passed).toMatch(/Passing [0-9]+ specs/);
-  done()
+  const messageRegex = /(?<passing>\d+) specs?, (?<failures>\d+) failures?/;
+  expect(result).toMatch(messageRegex);
+
+  let match = result.match(messageRegex);
+  let passing = match.groups.passing;
+  let failures = match.groups.failures;
+
+  if (failures === '0') {
+    console.log(`Passing ${passing} spec${passing > 1 ? 's' : ''}`);
+  } else {
+    fail(`${failures} failing spec${failures > 1 ? 's' : ''}`);
+  }
+
+  done();
 });
